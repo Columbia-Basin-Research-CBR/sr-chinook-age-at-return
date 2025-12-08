@@ -1,0 +1,163 @@
+---
+title: "Fish data for manuscript:"
+subtitle: "Biological, freshwater, and marine drivers of age at maturity in wild Chinook Salmon"
+author: "Jennifer L. Gosselin, Benjamin P. Sandford, Caitlin S. O'Brien and Eric R. Buhle"
+date: "last updated: 2025-12-07"
+output:
+  rmarkdown::html_document:
+    theme: cosmo
+    toc: TRUE
+    toc_float: FALSE
+    code_folding: hide
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r, message=FALSE, error=FALSE, results='hide', class.source='fold-show'}
+#packages
+library(here)
+library(tidyverse)
+library(lubridate)
+```
+
+
+#### **Import Data:**
+```{r, message=FALSE, error=FALSE, results='hide', class.source='fold-show'}
+#import data
+d<-read_csv(here("data", "adult_age_basefile_SEPT2023.csv")) 
+```
+
+#### **Basefile wrangling:**
+Filter to include wild and run types (1,2,5) with lengths between 45 and 155. Data is filtered from 1998 to 2020 based on outgoing detection indicating smolt outmigration year. Removed any `sessionmessage` with "fall". Filtered smolt outmigration DOY between 80-160 day-of-year. Adults return timestamps are filter based on month, excluding oct:dec months and further excluding Aug:Dec if release site was at LGR. 
+
+
+
+```{r,  message=FALSE, error=FALSE, results='hide',class.source='fold-show'}
+
+df <- d %>%
+  # filter fork length
+  filter(
+    between(length, 45, 155), #recommends 55 for ease of methods. 
+    # remove fall chinook from original data set based on sessionmessage and coordinator code
+    !str_detect(sessionmessage, "FALL")
+  ) %>%
+  # remove unknown and hatchery
+  filter(t_rear_type == "W") %>%
+  # pull year, month, doy for smolt and adu
+  mutate_at(c("juv_lgr_first", "juv_lgr_last"), lubridate::ymd_hms) %>%
+  mutate(adu_first = ifelse(!is.na(adu_bon_first), adu_bon_first,
+    if_else(!is.na(adu_bon_last), adu_bon_last,
+      if_else(!is.na(adu_mcn_first), adu_mcn_first,
+        if_else(!is.na(adu_mcn_last), adu_mcn_last,
+          if_else(!is.na(adu_ich_first), adu_ich_first,
+            if_else(!is.na(adu_ich_last), adu_ich_last,
+              if_else(!is.na(adu_lgr_first), adu_lgr_first,
+                if_else(!is.na(adu_lgr_last), adu_lgr_last,
+                  if_else(!is.na(adu_trb_first), adu_trb_first, adu_trb_last)
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )) %>%
+  mutate(adu_first = as_datetime(adu_first)) %>%
+  mutate(juv_first = ifelse(!is.na(juv_lgr_first), juv_lgr_first,
+ juv_lgr_last)
+) %>%
+  mutate(juv_first = lubridate::as_datetime(juv_first)) %>%
+  mutate(SYage1 = lubridate::year(juv_first)) %>%
+  mutate(AYageT = as.character(lubridate::year(adu_first))) %>%
+  mutate(
+    SYage1_month = lubridate::month(juv_first),
+    AYageT_month = lubridate::month(adu_first)
+  ) %>%
+  mutate(
+    SYage1_DOY = lubridate::yday(juv_first),
+    AYageT_DOY = lubridate::yday(adu_first)
+  ) %>%
+   #calculate age
+  mutate(
+    BYage0 = as.numeric(SYage1) - 1,
+    Yage2 = as.numeric(SYage1) + 1,
+    adult_age = as.numeric(AYageT) - as.numeric(SYage1) + 2
+  ) %>%
+  #relabel with ocean age- group any 4-Oceans with 3-Oceans, remove older or NA
+  mutate(OceanAge = case_when(
+    adult_age == 3 ~ "1-Ocean",
+    adult_age == 4 ~ "2-Ocean",
+    adult_age == 5 ~ "3-Ocean or greater",
+    adult_age == 6 ~ "3-Ocean or greater",
+    .default = "other"
+  )) %>%
+  #filter age: excluding minijacks, grouping 3Ocean and 4Ocean and removing >4Ocean
+  filter(OceanAge != "other") %>% 
+  # filter 1998 to 2020
+  filter(juv_first > "1998-01-01 00:00:00" &
+    juv_first < "2020-12-31 24:00:00") %>%
+  # filter DOY outmigration 80-160
+  filter(between(SYage1_DOY, 80, 160)) %>%
+  ## filter month return migration--exclude oct:dec & exclude aug/sept if rel site is LGR
+  filter(if_else(rel_site %in% c("LGRRBR", "LGRRRR"),between(AYageT_month, 1, 7), between(AYageT_month,1,9))) %>% 
+  # rename pass_types to T or ROR
+  mutate(pass_type_T_R = case_when(
+    str_detect(pass_type, "-S") ~ "ROR",
+    str_detect(pass_type, "-TB") ~ "ROR",
+    str_detect(pass_type, "-TD") ~ "ROR",
+    str_detect(pass_type, "-T") ~ "T",
+    str_detect(pass_type, "ROR") ~ "ROR"
+  )) %>%
+  mutate(t_rear_type = as.factor(t_rear_type)) %>%
+  # extract release year and assign lifestage when released (parr tagged above LGR, yearling tagged above LGR, and yearling tagged at LGR)
+  mutate(
+    rel_year = lubridate::year(rel_time),
+    rel_age = if_else(rel_year == SYage1 - 1, "ParrAboveLGR",
+      if_else(rel_rkm > 522.173, "SmoltAboveLGR", "SmoltAtLGR")
+    )
+  ) %>%
+  # add missing HUC codes for origin analysis
+  mutate(rel_huc = case_when(
+    rel_site == "GRANDR" ~ "17060104",
+    rel_site == "SNAKE3" ~ "17060103", 
+    .default = rel_huc
+  )) %>%
+  # add MPG designation based on HUC8 site except for missing HUC SNAKE3 & BS adjustments to individual rel_sites via email exchange
+  mutate(MPG = case_when(
+    rel_huc %in% c("17060102", "17060104", "17060105", "17060106") ~ "Grande Ronde/Imnaha",
+    rel_site == "SNAKE3" & rel_rkm == "522.278" ~ "Grande Ronde/Imnaha",
+    rel_site == "SNAKE3" & rel_rkm == "522.225" ~ "Lower Snake River",
+    rel_huc %in% c("17060103", "17060107") ~ "Lower Snake River", 
+    rel_huc %in% c("17060302", "17060303","17060304", "17060306") ~ "Clearwater River",
+    rel_huc %in% c("17060305", "17060208") ~ "South Fork Salmon River",
+    rel_huc %in%  c("17060209", "17060210") ~ "Lower Salmon River",
+    rel_huc %in% c("17060205", "17060206", "17060207") ~ "Middle Fork Salmon River",
+    rel_huc %in% c("17060201", "17060202", "17060203", "17060204") ~ "Upper Salmon River"
+  )) %>% 
+  # add MPG binned designation based on HUC8 site & BS suggestion via email exchange
+  mutate(MPG.bin = case_when(
+    rel_huc %in% c("17060102", "17060104", "17060105", "17060106") ~ "Grande Ronde/Imnaha",
+    rel_site == "SNAKE3" & rel_rkm == "522.278" ~ "Grande Ronde/Imnaha",
+    rel_site == "SNAKE3" & rel_rkm == "522.225" ~ "Lower Snake",
+    rel_huc %in% c("17060103", "17060107") ~ "Lower Snake", 
+    rel_huc %in% c("17060302", "17060303","17060304", "17060306",
+                   "17060201", "17060202", "17060203", "17060204",
+                   "17060205", "17060206", "17060207", "17060208", 
+                   "17060209", "17060210", "17060305") ~ "Clearwater and Salmon"
+    ))
+
+
+
+
+# writedata
+
+write.csv(df, file = here("data", "adult_age_data_subset.csv"), row.names = FALSE)
+
+#df<-read_csv( file=here("data", "adult_age_data_subset.csv"))
+
+```
+
+
+
+
+

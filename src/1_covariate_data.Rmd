@@ -1,0 +1,232 @@
+---
+title: "Covariate data for manuscript:"
+subtitle: "Biological, freshwater, and marine drivers of age at maturity in wild Chinook Salmon"
+author: "Jennifer L. Gosselin, Benjamin P. Sandford, Caitlin S. O'Brien and Eric R. Buhle"
+date: " Last updated: 2025-12-07"
+output:
+  rmarkdown::html_document:
+    theme: cosmo
+    toc: FALSE
+    toc_float: FALSE
+    code_folding: hide
+---
+
+
+```{r, warning=FALSE, message=FALSE, error=FALSE, class.source='fold-show'}
+# Packages
+library(tidyverse)
+library(here)
+library(data.table)
+library(zoo)
+```
+
+
+# 
+
+###
+
+#### **Naming designations:**
+
+- Broodyear (BYage0) = Year prior to smolt outmigration. 1 year lag from year of detection at LGR.
+- Smolt outmigration year (SYage1) = year of detection at LGR
+- Adult detection (AYageT) = year of first return detection at first dam (BON > MCN > ICH > LGR).
+- Xseason.T = relates to year prior to AYageT (OND: t-1, JFM: t)
+
+
+#### **Basefile prep for covariate data joins**
+```{r, warning=FALSE, error=FALSE, message=FALSE, class.source='fold-show' }
+d <- read_csv(here("data", "adult_age_data_subset.csv")) # importing filtered data from adult_age_basefile_SEPT2023.csv -> see file `0_data_subset.Rmd` for subset code.
+
+
+# paired down file to join covariates and factors of interest
+df.covariates <- d %>%
+  select("tag_id", "t_run", "t_rear_type", "pass_type_T_R", "rel_huc", "rel_site", "rel_rkm", "rel_age", "MPG", "MPG.bin", "BYage0", "SYage1","AYageT", "adult_age","OceanAge",  "length","SYage1_DOY") %>%
+  mutate(
+    rel_huc = as.character(rel_huc),
+    rel_rkm = as.character(rel_rkm),
+    BYage0 = as.character(BYage0),
+    SYage1 = as.character(SYage1),
+    AYageT = as.character(AYageT),
+    SYage1_DOY = as.character(SYage1_DOY)
+  )
+
+```
+
+
+
+# **Covariate Indices:** {.tabset}
+
+## A.	Biological/behavioural covariates 
+
+**1.	Smolt fork length**
+
+- `length` filtered to range: 45 to 155 mm
+
+
+**2.	Release age and location **
+
++	Release Age and Location, `Rel_age`: parr above LGR, smolt above LGR, smolt at LGR
+
+- Release site grouping, Major Population Group, `MPG`
+
+```{r eval=FALSE, include=TRUE}
+ # add MPG designation based on HUC8 site except for missing HUC SNAKE3 & BS adjustments to individual rel_sites
+  df.covariates <- df.covariates %>% mutate(MPG = case_when(
+    rel_huc %in% c("17060102", "17060104", "17060105", "17060106") ~ "Grande Ronde/Imnaha",
+    rel_site == "SNAKE3" & rel_rkm == "522.278" ~ "Grande Ronde/Imnaha",
+    rel_site == "SNAKE3" & rel_rkm == "522.225" ~ "Lower Snake River",
+    rel_huc %in% c("17060103", "17060107") ~ "Lower Snake River", 
+    rel_huc %in% c("17060302", "17060303","17060304", "17060306") ~ "Clearwater River",
+    rel_huc %in% c("17060305", "17060208") ~ "South Fork Salmon River",
+    rel_huc %in%  c("17060209", "17060210") ~ "Lower Salmon River",
+    rel_huc %in% c("17060205", "17060206", "17060207") ~ "Middle Fork Salmon River",
+    rel_huc %in% c("17060201", "17060202", "17060203", "17060204") ~ "Upper Salmon River"
+  )) 
+```
+
+**3.	Lower Granite Dam passage timing**
+
+ + `SYage1_DOY` is the day of year (DOY) of dam passage of juveniles in the smolt outmigration year (SY)
+ 
+**4.	Transported vs in-river passage type**
+
+- `pass_type_T_R` respresents juveniles being transported (T) or returned for in-river (R) passage through the hydrosystem
+
+
+
+## B.	Freshwater covariates
+
+**5.	LGR river temperature** 
+
+-	Daily data
+-	Calculate a 7-d running mean, right-aligned to LGR passage date (i.e., 7th day of the mean is the day the fish passed LGR)
+
+**6.	LGR flow**
+
+-	Daily data
+-	Calculate a 7-d running mean, right-aligned to LGR passage date
+
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+
+mean_na_fn <- function(x) {
+  mean(x, na.rm=TRUE)
+}
+
+LGR.raw.outflow.data <- fread("https://www.cbr.washington.edu/dart/cs/php/rpt/mg.php?sc=1&mgconfig=river&outputFormat=csvSingle&year%5B%5D=2023&year%5B%5D=2022&year%5B%5D=2021&year%5B%5D=2020&year%5B%5D=2019&year%5B%5D=2018&year%5B%5D=2017&year%5B%5D=2016&year%5B%5D=2015&year%5B%5D=2014&year%5B%5D=2013&year%5B%5D=2012&year%5B%5D=2011&year%5B%5D=2010&year%5B%5D=2009&year%5B%5D=2008&year%5B%5D=2007&year%5B%5D=2006&year%5B%5D=2005&year%5B%5D=2004&year%5B%5D=2003&year%5B%5D=2002&year%5B%5D=2001&year%5B%5D=2000&year%5B%5D=1999&year%5B%5D=1998&loc%5B%5D=LWG&data%5B%5D=Outflow&startdate=1%2F1&enddate=12%2F31&avgyear=0&consolidate=1&grid=1&y1min=0&y1max=&y2min=&y2max=&size=large",
+  skip = 1,
+  fill=TRUE,
+  nrows=9516
+)
+
+# Feb 29 has NA in non-leap years in data set
+# remove these rows
+LGR.raw.outflow.data <- LGR.raw.outflow.data[-which(LGR.raw.outflow.data$year %in% c(1998,1999,2001:2003,2005:2007,2009:2011,2013:2015,2017:2019,2021:2024) & LGR.raw.outflow.data$`mm-dd` == "2-29"),]
+
+LGR.7d.outflow.data <- LGR.raw.outflow.data %>%
+  mutate(outflow_7d=rollapply(value, width = 7, FUN=mean_na_fn, fill=FALSE, align = "right")) %>%
+  mutate(date = lubridate::ymd(paste0(`year`, "-", `mm-dd`))) %>%
+  mutate(DOY = lubridate::yday(date))
+
+LGR.7d.outflow <- tibble(
+  SYage1 = as.character(LGR.7d.outflow.data$year),
+  SYage1_DOY = as.character(LGR.7d.outflow.data$DOY),
+  LGR.flow.7d = LGR.7d.outflow.data$outflow_7d)
+
+
+
+LGR.raw.temperature.data <- fread("https://www.cbr.washington.edu/dart/cs/php/rpt/mg.php?sc=1&mgconfig=river&outputFormat=csvSingle&year%5B%5D=2023&year%5B%5D=2022&year%5B%5D=2021&year%5B%5D=2020&year%5B%5D=2019&year%5B%5D=2018&year%5B%5D=2017&year%5B%5D=2016&year%5B%5D=2015&year%5B%5D=2014&year%5B%5D=2013&year%5B%5D=2012&year%5B%5D=2011&year%5B%5D=2010&year%5B%5D=2009&year%5B%5D=2008&year%5B%5D=2007&year%5B%5D=2006&year%5B%5D=2005&year%5B%5D=2004&year%5B%5D=2003&year%5B%5D=2002&year%5B%5D=2001&year%5B%5D=2000&year%5B%5D=1999&year%5B%5D=1998&loc%5B%5D=LWG&data%5B%5D=Temp+%28WQM%29&startdate=1%2F1&enddate=12%2F31&avgyear=0&consolidate=1&grid=1&y1min=0&y1max=&y2min=&y2max=&size=large",
+  skip = 1,
+  fill=TRUE,
+  nrows=9516
+)
+
+# remove Feb 29 dates that do not exist
+LGR.raw.temperature.data <- LGR.raw.temperature.data[-which(LGR.raw.temperature.data$year %in% c(1998,1999,2001:2003,2005:2007,2009:2011,2013:2015,2017:2019,2021:2024) & LGR.raw.temperature.data$`mm-dd` == "2-29"),]
+
+
+LGR.7d.temperature.data <- LGR.raw.temperature.data %>%
+  mutate(temperature_7d=rollapply(value, width = 7, FUN=mean_na_fn, fill=FALSE, align = "right")) %>%
+  mutate(date = lubridate::ymd(paste0(`year`, "-", `mm-dd`))) %>%
+  mutate(DOY = lubridate::yday(date))
+
+LGR.7d.temperature <- tibble(
+  SYage1 = as.character(LGR.7d.temperature.data$year),
+  SYage1_DOY = as.character(LGR.7d.temperature.data$DOY),
+  LGR.temp.7d = LGR.7d.temperature.data$temperature_7d)
+
+df.covariates <-
+  left_join(x = df.covariates,y= LGR.7d.outflow, by = c("SYage1" = "SYage1", "SYage1_DOY" = "SYage1_DOY"))
+
+df.covariates <-
+  left_join(x = df.covariates,y= LGR.7d.temperature, by = c("SYage1" = "SYage1", "SYage1_DOY" = "SYage1_DOY"))
+```
+
+
+
+
+
+## C.	Marine covariate
+
+**7.	North Pacific Gyre Oscillation (NPGO) index**
+    
+-	raw monthly data
+```{r, warning=FALSE}
+NPGO.raw.data <- fread("https://www.o3d.org/npgo/data/NPGO.txt",
+  skip = 30,
+  header = FALSE, 
+  fill=TRUE
+)
+NPGO.raw.data <- NPGO.raw.data[1:889,]
+
+NPGO.raw.data <- NPGO.raw.data %>%
+  rename(year = 1, month = 2, NPGO = 3) %>%
+  mutate(CY = as.numeric(year)) %>%
+  mutate(
+    BYage0 = ifelse(month %in% c(1:9), CY - 1, CY),
+    WY = ifelse(month %in% c(1:9), CY, (CY + 1))
+  ) %>%
+  mutate(
+    SYage1 = BYage0,
+    AYageT = BYage0 +1
+  ) %>%
+  mutate(across(!NPGO, as.character))
+```
+
+
+-	fall/wintor prior to adult return
+```{r}
+# fall/winter prior to adult return
+NPGO.ONDJFM.T <- NPGO.raw.data %>%
+  filter(month %in% c(10:12, 1:3)) %>%
+  summarise(.by = AYageT, NPGO.ONDJFM.T = round(mean(NPGO), 3))
+
+df.covariates <- left_join(x = df.covariates, y = NPGO.ONDJFM.T, by = "AYageT")
+```
+
+-	3-year average
+```{r}
+# 3-year average of fall/winter NPGO starting with smolt year
+
+NPGO.ONDJFM.T.3 <- NPGO.raw.data %>%
+  filter(month %in% c(10:12, 1:3)) %>%
+  summarise(.by = SYage1, NPGO.ONDJFM.T = round(mean(NPGO), 3))
+
+NPGO.ONDJFM.T.3$NPGO.ONDJFM.T.AVG3 <- rollmean(NPGO.ONDJFM.T.3$NPGO.ONDJFM.T, 
+                                               k=3, align="left", fill=c(NA,NA,NA))
+NPGO.ONDJFM.T.3 <- NPGO.ONDJFM.T.3[,-2]
+
+df.covariates <- left_join(x = df.covariates, y = NPGO.ONDJFM.T.3, by = "SYage1")
+```
+
+
+
+
+# {-}
+
+----
+## Save file
+
+```{r}
+# use file for `2_brms_probit_age_mdoels.R`
+write.csv(df.covariates, file = here("data", "adult_age_covariate_data.csv"), row.names = FALSE)
+```

@@ -1,0 +1,267 @@
+---
+title: "brms_probit_age_covariates"
+author: "Caitlin S. O'Brien and Jennifer L. Gosselin"
+output: html_document
+date: "Last updated: 2025-12-07"
+---
+
+
+# Setup {.tabset}
+probit model using brms with Chinook data
+Based on examples from [bookdown](https://bookdown.org/content/3686/ordinal-predicted-variable.html) & [Burkner and Vuorre 2019](https://journals.sagepub.com/doi/pdf/10.1177/2515245918823199)
+
+Past model code can be seen in previous versions of .Rmd and most models are currently being saved in a shared dropbox if access is needed. For the script below, all model output and recalled models are based on an local file folder `models.local` in the `age of return` R project where I temporarily store the models as needed. The most up-to-date working model is saved in the `models.local` folder. 
+
+Summary of models attempted:
+- pairwise comparison of large scale, coastal, regional, and local environmental covariates denoted in `1_covariate_data.Rmd`
+
+- pairwise comparison on biological covariates outlined in `1_covariate_data.Rmd` along with pitPH.
+
+- comparison of different lag types: year/season prior to ocean entry (BY), year/season of ocean entry (SY), and year/season prior to adult return (T)
+  - to consider: lag AL of BYorSY paired with PDO/SST of year prior to adult return T? -> final model removes AL all together (JG recommendation)
+  
+- top-down approach following environmental and biological pairwise comparisons and analysis of highly correlated variables (i.e., selecting DOY over temp for final model)
+
+- filtering of outlier years: 2000, more 3-ocean then 2-ocean; 2008, highest return; 2015, lower return matched with variable marine indice years. No change in overall patterns. 
+
+- Inclusion of lifestage at release date (first attempt: parr vs smolt, second attempt: parraboveLGR, smoltaboveLGR, smoltatLGR (kept in final model), release_DOY, and count of bypass detections per K. Malone suggestion.  
+
+- Updated release age and location with addition of 2020 SMY, associated SST years(through 2023).
+
+- Added MPG/Release site groupings at the basin level (later adjusted to be MPG binned categories n=3) and further designated based on MPG & release sites with BS additions n=7. 
+
+- Updated dataset by removing all adults returning in oct/nov, along with any aug/sept returns with LGR rel_sites. Kept aug/sept returns with other rel_sites.(have not confirmed with BS and EB- JG confirmed) _recheck this with JG, differs from methods in manuscript write-up.
+
+- Final model: length 45 to 155 mm, age grouped by 3, 4, (5 +6)
+
+
+pending: 
+- Consider including autocorrelation over default [autocor](http://paul-buerkner.github.io/brms/reference/autocor-terms.html) -- tbd
+
+
+
+## Packages
+```{r, warning=FALSE, message=FALSE, error=FALSE}
+# packages
+library(here)
+library(brms)
+library(tidyverse)
+library(GGally)
+library(scales)
+library(shinystan)
+library(beepr) # alarm sound to make if seem like a model just popped out of an easy bake oven
+```
+
+         
+# Data
+```{r echo=TRUE}
+# import subsetted age of return data with covariate data
+DATA <- read_csv(here("data", "adult_age_covariate_data.csv"))
+
+
+# filter, arrange DATA
+data.age.length <- DATA %>%
+  #bin adult_age for model
+  mutate(age_group = case_when(
+    adult_age == 3 ~ 3,
+    adult_age == 4 ~ 4,
+    between(adult_age, 5,6) ~ 5
+  )) %>% 
+  #sort age
+  arrange(age_group) %>%
+  # set latent variable as ordered factor
+  mutate(age_group = factor(age_group, ordered = TRUE)) %>%
+  #set reference categories for categorical variables
+  mutate(
+    pass_type_T_R = factor(pass_type_T_R, levels = c("ROR", "T")),
+    rel_age = factor(rel_age, levels = c("ParrAboveLGR", "SmoltAboveLGR", "SmoltAtLGR")),
+    #basin = factor(basin, levels = c("Lower Snake", "Salmon", "Clearwater")),
+    MPG = factor(MPG, levels = c("Grande Ronde/Imnaha", "Lower Snake River",
+                                 "Clearwater River","South Fork Salmon River",
+                                 "Lower Salmon River","Middle Fork Salmon River","Upper Salmon River")
+                 ),
+    MPG.bin = factor(MPG.bin, levels = c("Grande Ronde/Imnaha", "Lower Snake","Clearwater and Salmon")
+                     )
+  ) %>% 
+  mutate(SYage1 = as.character(SYage1)) %>%
+  mutate(SYage1_DOY = as.numeric(SYage1_DOY)) 
+
+
+# scale data
+data.scaled <- data.age.length %>%
+  mutate_at(c(16:22), ~ (scale(.) %>% as.vector())) # adjust as needed
+
+```
+
+Check correlations among covariates
+```{r, echo = FALSE, eval=FALSE}
+# Consider excluding combinations of covariates with correlation coefficients > 0.4
+cor(data.scaled[,16:22], use="pairwise.complete.obs")
+
+```
+
+
+# Models
+
+## fit_DOY_npgo3: base model which adds interaction term for length:release age grouping and using DOYa dn 3-year average of fall-winter NPGO. Includes N(0,4) priors
+[interactionbookdown](https://bookdown.org/ajkurz/Statistical_Rethinking_recoded/interactions.html#interpreting-an-interaction-estimate)
+```{r}
+
+fit_DOY_npgo3 <- brm(age_group ~ length * rel_age + MPG + SYage1_DOY + LGR.flow.7d + pass_type_T_R + NPGO.ONDJFM.T.AVG3 + (1 | SYage1),
+  data = data.scaled,
+  family = cumulative("probit"),
+  prior = c(prior(normal(0, 5), class = Intercept),
+                prior(normal(0, 5), class = b)),
+  chains = 3,
+  cores = 3,
+  iter = 4000, warmup = 1000, thin=1, seed=1234,
+  control = list(adapt_delta = 0.995, max_treedepth = 15),
+  init = 0,
+  file = here("results/models.local", "fit_DOY_npgo3")
+)
+ 
+summary(fit_DOY_npgo3)
+summary(fit_DOY_npgo3, prob=c(0.90))
+launch_shinystan(fit_DOY_npgo3)
+prior_summary(fit_DOY_npgo3)
+#plot(fit_DOY_npgo3)
+#conditional_effects(fit_DOY_npgo3, categorical = T, prob = .95)
+#posterior_summary(fit_DOY_npgo3)
+
+fit_DOY_npgo3_thin3 <- brm(age_group ~ length * rel_age + MPG + SYage1_DOY + LGR.flow.7d + pass_type_T_R + NPGO.ONDJFM.T.AVG3 + (1 | SYage1),
+  data = data.scaled,
+  family = cumulative("probit"),
+  prior = c(prior(normal(0, 5), class = Intercept),
+                prior(normal(0, 5), class = b)),
+  chains = 3,
+  cores = 3,
+  iter = 10000, warmup = 1000, thin=3, seed=1234,
+  control = list(adapt_delta = 0.995, max_treedepth = 15),
+  init = 0,
+  file = here("results/models.local", "fit_DOY_npgo3_thin3")
+)
+summary(fit_DOY_npgo3_thin3)
+ 
+
+ranef.df <- ranef(fit_DOY_npgo3, probs = c(0.05, 0.95))
+ranef.df <- round(as.data.frame(ranef.df),4)
+write.csv(ranef.df, file=here("results", "random_effects.csv"))
+
+# for comparison without year 2000 data
+data.scaled.no2000 <- data.scaled[-which(data.scaled$SYage1=="2000"),]
+fit_DOY_npgo3_no2000 <- brm(age_group ~ length * rel_age + MPG + SYage1_DOY + LGR.flow.7d + pass_type_T_R + NPGO.ONDJFM.T.AVG3 + (1 | SYage1),
+                      data = data.scaled.no2000,
+                      family = cumulative("probit"),
+                      prior = c(prior(normal(0, 5), class = Intercept),
+                                prior(normal(0, 5), class = b)),
+                      chains = 3,
+                      cores = 3,
+                      iter = 10000, warmup = 1000, thin=3, seed=1234,
+                      control = list(adapt_delta = 0.995, max_treedepth = 15),
+                      init = 0
+)
+summary(fit_DOY_npgo3_no2000)
+
+
+```
+
+## fit_TEMP_npgo3: same model with temp instead of DOY
+```{r}
+fit_TEMP_npgo3 <- brm(age_group ~ length * rel_age + MPG + LGR.temp.7d + LGR.flow.7d + pass_type_T_R + NPGO.ONDJFM.T.AVG3 + (1 | SYage1),
+  data = data.scaled,
+  family = cumulative("probit"),
+  chains = 3,
+  cores = 3,  
+  iter = 4000, warmup = 1000, thin=1, seed=1234,
+  control = list(adapt_delta = 0.995, max_treedepth = 15),
+  init = 0,
+  file = here("results/models.local", "fit_TEMP_npgo3")
+)
+
+summary(fit_TEMP_npgo3)
+summary(fit_TEMP_npgo3, prob=c(0.90))
+# launch_shinystan(fit_TEMP_npgo3)
+
+
+fit_TEMP_npgo3_thin3 <- brm(age_group ~ length * rel_age + MPG + LGR.temp.7d + LGR.flow.7d + pass_type_T_R + NPGO.ONDJFM.T.AVG3 + (1 | SYage1),
+  data = data.scaled,
+  family = cumulative("probit"),
+  chains = 3,
+  cores = 3,  
+  iter = 10000, warmup = 1000, thin=3, seed=1234,
+  control = list(adapt_delta = 0.995, max_treedepth = 15),
+  init = 0,
+  file = here("results/models.local", "fit_TEMP_npgo3_thin3")
+)
+
+summary(fit_TEMP_npgo3_thin3)
+```
+
+# Subset model by grouping covariates: 
+
+## fit_fish
+```{r}
+fit_fish <- brm(age_group ~ length*rel_age + MPG + SYage1_DOY+ (1 | SYage1),
+  data = data.scaled,
+  family = cumulative("probit"),
+  chains = 3,
+  cores = 3,
+  iter = 4000, warmup = 1000, thin=1, seed=1234,
+  control = list(adapt_delta = 0.995, max_treedepth = 15),
+  init = 0,
+  file = here("results/models.local", "fit_fish")
+)
+summary(fit_fish, prob=c(0.90))
+```
+
+## fit_freshwater
+```{r}
+fit_freshwater1<- brm(age_group ~ LGR.temp.7d + LGR.flow.7d + pass_type_T_R + (1 | SYage1),
+  data = data.scaled,
+  family = cumulative("probit"),
+  chains = 3,
+  cores = 3,
+  iter = 4000, warmup = 1000, thin=1, seed=1234,
+  control = list(adapt_delta = 0.995, max_treedepth = 15),
+  init = 0,
+  file = here("results/models.local", "fit_freshwater")
+)
+summary(fit_freshwater1, prob=c(0.90))
+
+fit_freshwater2<- brm(age_group ~ LGR.flow.7d + pass_type_T_R + (1 | SYage1),
+  data = data.scaled,
+  family = cumulative("probit"),
+  chains = 3,
+  cores = 3,
+  iter = 4000, warmup = 1000, thin=1, seed=1234,
+  control = list(adapt_delta = 0.995, max_treedepth = 15),
+  init = 0,
+  file = here("results/models.local", "fit_freshwater2")
+)
+summary(fit_freshwater2, prob=c(0.90))
+```
+
+## fit_marine
+```{r}
+fit_marine<- brm(age_group ~ NPGO.ONDJFM.T.AVG3 + (1 | SYage1),
+  data = data.scaled,
+  family = cumulative("probit"),
+  chains = 3,
+  cores = 3,
+  iter = 4000, warmup = 1000, thin=1, seed=1234,
+  control = list(adapt_delta = 0.995, max_treedepth = 15),
+  init = 0,
+  file = here("results/models.local", "fit_marine")
+)
+summary(fit_marine, prob=c(0.90))
+```
+
+
+## compare
+```{r}
+loo.results<-loo(fit_DOY_npgo3, fit_TEMP_npgo3, fit_fish, fit_freshwater1, fit_freshwater2, fit_marine)
+knitr::kable(loo.results$diffs)
+```
+
+
+###
