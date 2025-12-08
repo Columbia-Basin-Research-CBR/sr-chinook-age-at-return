@@ -152,6 +152,54 @@ p_Fig2
 
 
 ## Figure 3. hypothetical distr. and tao cutpoints
+# load(here("results/models.local", "fit_DOY_npgo3.rds"))
+m <- fit_DOY_npgo3
+
+draws <- as_draws_df(m) %>%
+  select(.draw, `b_Intercept[1]`:`b_Intercept[2]`)
+
+# summarize draws (int 1 and 2 only)
+taos <- m %>%
+  gather_draws(`b_Intercept[1]`, `b_Intercept[2]`) %>%
+  summarise_draws()
+taos
+
+# only select medians with 5 to 95 CI
+med_taos <- taos %>%
+  select(1, 4, 7:8) %>%
+  pivot_wider(names_from = .variable, values_from = c("median", "q5", "q95"))
+med_taos
+
+# plot with verticle lines to represent median, with 5 to 95 CI
+tibble(x = seq(from = -3, to = 3, by = .01)) %>%
+  mutate(d = dnorm(x)) %>%
+  ggplot(aes(x = x, ymin = 0, ymax = d)) +
+  geom_ribbon(fill = "darkgrey") +
+  geom_vline(xintercept = as.numeric(med_taos[1, 1:2]), color = "white", linetype = 1, linewidth = 1) +
+  geom_vline(xintercept = as.numeric(med_taos[1, 3:6]), color = "white", linetype = 2, linewidth = .3) +
+  labs(y = "Probability") +
+  scale_x_continuous(NULL,
+                     breaks = c(-3, -2, -1, 0, 1, 2, 3),
+                     labels = c(-3, -2, -1, 0, 1, 2, 3)
+  ) +
+  annotate(geom="text", x=-1.38, y=.18, label=expression(paste(tau[1]))) +
+  annotate(geom="text", x=.935, y=.29, label=expression(paste(tau[2]))) +
+  # scale_x_continuous(NULL,
+  #                    breaks = c(as.numeric(med[1, 1:2])),
+  #                    labels = c(parse(text = str_c("tao[", 1:2, "]")))
+  # ) +
+  # ggtitle("Standard normal distribution underlying the ordinal Y data:",
+  #         subtitle = "The solid vertical lines mark the posterior means for the thresholds. \nThe dashed vertical lines represent the 95 CI") +
+  theme_minimal() +
+  theme(
+    strip.text = element_blank(),
+    axis.line.x = element_line(linewidth = 0.3),
+    axis.ticks = element_line(linewidth = 0.3),
+    axis.line.y = element_line(linewidth = 0.3),
+    axis.title.x = element_text(margin = margin(t = 8, r = 0, b = 0, l = 0)),
+    axis.title.y = element_text(margin = margin(t = 0, r = 8, b = 0, l = 0))
+  ) +
+  coord_cartesian(xlim = c(-3, 3))
 
 
 

@@ -64,7 +64,7 @@ fit_DOY_npgo3 <- brm(age_group ~ length * rel_age + MPG + SYage1_DOY + LGR.flow.
                      iter = 4000, warmup = 1000, thin=1, seed=1234,
                      control = list(adapt_delta = 0.995, max_treedepth = 15),
                      init = 0,
-                     file = here("results/models.local", "fit_DOY_npgo3")
+                     # file = here("results/models.local", "fit_DOY_npgo3")
 )
 summary(fit_DOY_npgo3, prob=c(0.90))
 # launch_shinystan(fit_DOY_npgo3)
@@ -89,7 +89,7 @@ fit_TEMP_npgo3 <- brm(age_group ~ length * rel_age + MPG + LGR.temp.7d + LGR.flo
                       iter = 4000, warmup = 1000, thin=1, seed=1234,
                       control = list(adapt_delta = 0.995, max_treedepth = 15),
                       init = 0,
-                      file = here("results/models.local", "fit_TEMP_npgo3")
+                      # file = here("results/models.local", "fit_TEMP_npgo3")
 )
 summary(fit_TEMP_npgo3, prob=c(0.90))
 # launch_shinystan(fit_TEMP_npgo3)
@@ -107,7 +107,7 @@ fit_fish <- brm(age_group ~ length*rel_age + MPG + SYage1_DOY+ (1 | SYage1),
                 iter = 4000, warmup = 1000, thin=1, seed=1234,
                 control = list(adapt_delta = 0.995, max_treedepth = 15),
                 init = 0,
-                file = here("results/models.local", "fit_fish")
+                # file = here("results/models.local", "fit_fish")
 )
 summary(fit_fish, prob=c(0.90))
 
@@ -122,7 +122,7 @@ fit_freshwater1<- brm(age_group ~ LGR.temp.7d + LGR.flow.7d + pass_type_T_R + (1
                       iter = 4000, warmup = 1000, thin=1, seed=1234,
                       control = list(adapt_delta = 0.995, max_treedepth = 15),
                       init = 0,
-                      file = here("results/models.local", "fit_freshwater")
+                      # file = here("results/models.local", "fit_freshwater")
 )
 summary(fit_freshwater1, prob=c(0.90))
 
@@ -134,7 +134,7 @@ fit_freshwater2<- brm(age_group ~ LGR.flow.7d + pass_type_T_R + (1 | SYage1),
                       iter = 4000, warmup = 1000, thin=1, seed=1234,
                       control = list(adapt_delta = 0.995, max_treedepth = 15),
                       init = 0,
-                      file = here("results/models.local", "fit_freshwater2")
+                      # file = here("results/models.local", "fit_freshwater2")
 )
 summary(fit_freshwater2, prob=c(0.90))
 
@@ -149,7 +149,7 @@ fit_marine<- brm(age_group ~ NPGO.ONDJFM.T.AVG3 + (1 | SYage1),
                  iter = 4000, warmup = 1000, thin=1, seed=1234,
                  control = list(adapt_delta = 0.995, max_treedepth = 15),
                  init = 0,
-                 file = here("results/models.local", "fit_marine")
+                 # file = here("results/models.local", "fit_marine")
 )
 summary(fit_marine, prob=c(0.90))
 
