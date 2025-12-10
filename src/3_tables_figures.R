@@ -170,24 +170,45 @@ med_taos <- taos %>%
   pivot_wider(names_from = .variable, values_from = c("median", "q5", "q95"))
 med_taos
 
-# plot with verticle lines to represent median, with 5 to 95 CI
-tibble(x = seq(from = -3, to = 3, by = .01)) %>%
+# plot with vertical lines to represent median, with 5 to 95 CI
+p_ex_drib <- tibble(x = seq(from = -3, to = 3, by = .01)) %>%
   mutate(d = dnorm(x)) %>%
   ggplot(aes(x = x, ymin = 0, ymax = d)) +
   geom_ribbon(fill = "darkgrey") +
-  geom_vline(xintercept = as.numeric(med_taos[1, 1:2]), color = "white", linetype = 1, linewidth = 1) +
-  geom_vline(xintercept = as.numeric(med_taos[1, 3:6]), color = "white", linetype = 2, linewidth = .3) +
-  labs(y = "Probability") +
+  # tao 1
+  geom_segment(x = as.numeric(med_taos[1,1]), y = 0,
+               xend = as.numeric(med_taos[1,1]), yend = 0.16,
+               color = "white", linetype = 1, linewidth = 1) +
+  # tao 2
+  geom_segment(x = as.numeric(med_taos[1,2]), y = 0,
+               xend = as.numeric(med_taos[1,2]), yend = 0.31,
+               color = "white", linetype = 1, linewidth = 1) +
+  # tao 1, low CL
+  geom_segment(x = as.numeric(med_taos[1,3]), y = 0,
+                xend = as.numeric(med_taos[1,3]), yend = 0.13,
+                color = "white", linetype = 2, linewidth = .3) +
+  # tao 1, high CL
+  geom_segment(x = as.numeric(med_taos[1,5]), y = 0,
+               xend = as.numeric(med_taos[1,5]), yend = 0.2,
+               color = "white", linetype = 2, linewidth = .3) +
+  # tao 2, low CL
+  geom_segment(x = as.numeric(med_taos[1,4]), y = 0,
+               xend = as.numeric(med_taos[1,4]), yend = 0.349,
+               color = "white", linetype = 2, linewidth = .3) +
+  # tao 2, high CL
+  geom_segment(x = as.numeric(med_taos[1,6]), y = 0,
+               xend = as.numeric(med_taos[1,6]), yend = 0.245,
+               color = "white", linetype = 2, linewidth = .3) +
   scale_x_continuous(NULL,
                      breaks = c(-3, -2, -1, 0, 1, 2, 3),
                      labels = c(-3, -2, -1, 0, 1, 2, 3)
   ) +
-  annotate(geom="text", x=-1.38, y=.18, label=expression(paste(tau[1]))) +
-  annotate(geom="text", x=.935, y=.29, label=expression(paste(tau[2]))) +
-  # scale_x_continuous(NULL,
-  #                    breaks = c(as.numeric(med[1, 1:2])),
-  #                    labels = c(parse(text = str_c("tao[", 1:2, "]")))
-  # ) +
+  annotate(geom="text", x=-1.55, y=.14, label=expression(paste(tau[1]))) +
+  annotate(geom="text", x=.75, y=.32, label=expression(paste(tau[2]))) +
+  annotate(geom="text", x=-2.15, y=0.012, label=expression(bold("P(Age=3)")), col="black", cex=2.8) +
+  annotate(geom="text", x=-.3, y=0.012, label=expression(bold("P(Age=4)")), col="cyan", cex=2.8) +
+  annotate(geom="text", x=1.7, y=0.012, label=expression(bold("P(Age=5)")), col="darkred", cex=2.8) +
+  labs(y = "Probability", x = "z-score of latent variable equivalent to age") +
   # ggtitle("Standard normal distribution underlying the ordinal Y data:",
   #         subtitle = "The solid vertical lines mark the posterior means for the thresholds. \nThe dashed vertical lines represent the 95 CI") +
   theme_minimal() +
@@ -197,16 +218,20 @@ tibble(x = seq(from = -3, to = 3, by = .01)) %>%
     axis.ticks = element_line(linewidth = 0.3),
     axis.line.y = element_line(linewidth = 0.3),
     axis.title.x = element_text(margin = margin(t = 8, r = 0, b = 0, l = 0)),
-    axis.title.y = element_text(margin = margin(t = 0, r = 8, b = 0, l = 0))
-  ) +
+    axis.title.y = element_text(margin = margin(t = 0, r = 8, b = 0, l = 0)),
+    plot.margin = margin(t = 20,
+                         r = 50,
+                         b = 40,
+                         l = 10)) +
   coord_cartesian(xlim = c(-3, 3))
-
-
+# pdf(here("results", "figures", "manuscript", "Fig3 Distrib and tao cutpoints.pdf"), width=7, height=4, onefile=TRUE)
+p_ex_drib
+# dev.off()
 
 
 
 ## Figure 4. Beta effects
-# pdf(here("results", "figures", "manuscript", "Fig3 Beta params.pdf"), width=7, height=9, onefile=TRUE)
+# pdf(here("results", "figures", "manuscript", "Fig4 Beta params.pdf"), width=7, height=9, onefile=TRUE)
 m %>%
   gather_draws(
     b_MPGLowerSnakeRiver, b_MPGClearwaterRiver,
