@@ -1,15 +1,18 @@
 # probit regression models run with brms
 # for manuscript: "Biological, freshwater, and marine drivers of age at maturity in wild Chinook Salmon"
 # authors: Jennifer L. Gosselin, Benjamin P. Sandford, Caitlin S. O'Brien and Eric R. Buhle
-# last update: 2025-12-07
+# last update: 2025-12-12
 
 # packages
-library(here)
-library(brms)
-library(tidyverse)
-library(GGally)
-library(scales)
-library(shinystan)
+# library(here)
+# library(brms)
+# library(tidyverse)
+# library(GGally)
+# library(scales)
+# library(shinystan)
+pkgs<-c("here", "brms", "tidyverse", "GGally", "scales", "shinystan")
+if(length(setdiff(pkgs,rownames(installed.packages())))>0) {install.packages(setdiff(pkgs,rownames(installed.packages())),dependencies=TRUE)}
+invisible(lapply(pkgs,library,character.only=T))
 
 # Age of return data with covariate data
 DATA <- read_csv(here("data", "adult_age_covariate_data.csv"))
@@ -45,11 +48,11 @@ data.age.length <- DATA %>%
 
 # scale data
 data.scaled <- data.age.length %>%
-  mutate_at(c(16:22), ~ (scale(.) %>% as.vector())) # adjust as needed
+  mutate_at(c(16:21), ~ (scale(.) %>% as.vector())) # adjust as needed
 
 
 # Consider excluding combinations of covariates with correlation coefficients > 0.4
-cor(data.scaled[,16:22], use="pairwise.complete.obs")
+cor(data.scaled[,16:21], use="pairwise.complete.obs")
 
 
 
@@ -64,7 +67,7 @@ fit_DOY_npgo3 <- brm(age_group ~ length * rel_age + MPG + SYage1_DOY + LGR.flow.
                      iter = 4000, warmup = 1000, thin=1, seed=1234,
                      control = list(adapt_delta = 0.995, max_treedepth = 15),
                      init = 0,
-                     # file = here("results/models.local", "fit_DOY_npgo3")
+                     # file = here("results/models.local", "fit_DOY_npgo3.rds")
 )
 summary(fit_DOY_npgo3, prob=c(0.90))
 # launch_shinystan(fit_DOY_npgo3)
@@ -89,7 +92,7 @@ fit_TEMP_npgo3 <- brm(age_group ~ length * rel_age + MPG + LGR.temp.7d + LGR.flo
                       iter = 4000, warmup = 1000, thin=1, seed=1234,
                       control = list(adapt_delta = 0.995, max_treedepth = 15),
                       init = 0,
-                      # file = here("results/models.local", "fit_TEMP_npgo3")
+                      # file = here("results/models.local", "fit_TEMP_npgo3.rds")
 )
 summary(fit_TEMP_npgo3, prob=c(0.90))
 # launch_shinystan(fit_TEMP_npgo3)
@@ -107,7 +110,7 @@ fit_fish <- brm(age_group ~ length*rel_age + MPG + SYage1_DOY+ (1 | SYage1),
                 iter = 4000, warmup = 1000, thin=1, seed=1234,
                 control = list(adapt_delta = 0.995, max_treedepth = 15),
                 init = 0,
-                # file = here("results/models.local", "fit_fish")
+                # file = here("results/models.local", "fit_fish.rds")
 )
 summary(fit_fish, prob=c(0.90))
 
@@ -122,7 +125,7 @@ fit_freshwater1<- brm(age_group ~ LGR.temp.7d + LGR.flow.7d + pass_type_T_R + (1
                       iter = 4000, warmup = 1000, thin=1, seed=1234,
                       control = list(adapt_delta = 0.995, max_treedepth = 15),
                       init = 0,
-                      # file = here("results/models.local", "fit_freshwater")
+                      # file = here("results/models.local", "fit_freshwater1.rds")
 )
 summary(fit_freshwater1, prob=c(0.90))
 
@@ -134,7 +137,7 @@ fit_freshwater2<- brm(age_group ~ LGR.flow.7d + pass_type_T_R + (1 | SYage1),
                       iter = 4000, warmup = 1000, thin=1, seed=1234,
                       control = list(adapt_delta = 0.995, max_treedepth = 15),
                       init = 0,
-                      # file = here("results/models.local", "fit_freshwater2")
+                      # file = here("results/models.local", "fit_freshwater2.rds")
 )
 summary(fit_freshwater2, prob=c(0.90))
 
@@ -149,7 +152,7 @@ fit_marine<- brm(age_group ~ NPGO.ONDJFM.T.AVG3 + (1 | SYage1),
                  iter = 4000, warmup = 1000, thin=1, seed=1234,
                  control = list(adapt_delta = 0.995, max_treedepth = 15),
                  init = 0,
-                 # file = here("results/models.local", "fit_marine")
+                 # file = here("results/models.local", "fit_marine.rds")
 )
 summary(fit_marine, prob=c(0.90))
 

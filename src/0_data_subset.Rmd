@@ -2,7 +2,7 @@
 title: "Fish data for manuscript:"
 subtitle: "Biological, freshwater, and marine drivers of age at maturity in wild Chinook Salmon"
 author: "Jennifer L. Gosselin, Benjamin P. Sandford, Caitlin S. O'Brien and Eric R. Buhle"
-date: "last updated: 2025-12-07"
+date: "last updated: 2025-12-12"
 output:
   rmarkdown::html_document:
     theme: cosmo
@@ -15,9 +15,12 @@ editor_options:
 
 ```{r, message=FALSE, error=FALSE, results='hide', class.source='fold-show'}
 #packages
-library(here)
-library(tidyverse)
-library(lubridate)
+# library(here)
+# library(tidyverse)
+# library(lubridate)
+pkgs<-c("here", "tidyverse", "lubridate")
+if(length(setdiff(pkgs,rownames(installed.packages())))>0) {install.packages(setdiff(pkgs,rownames(installed.packages())),dependencies=TRUE)}
+invisible(lapply(pkgs,library,character.only=T))
 ```
 
 

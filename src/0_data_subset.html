@@ -460,15 +460,18 @@ display: none;
 at maturity in wild Chinook Salmon</h3>
 <h4 class="author">Jennifer L. Gosselin, Benjamin P. Sandford, Caitlin
 S. O’Brien and Eric R. Buhle</h4>
-<h4 class="date">last updated: 2025-12-07</h4>
+<h4 class="date">last updated: 2025-12-12</h4>
 
 </div>
 
 
 <pre class="r fold-show"><code>#packages
-library(here)
-library(tidyverse)
-library(lubridate)</code></pre>
+# library(here)
+# library(tidyverse)
+# library(lubridate)
+pkgs&lt;-c(&quot;here&quot;, &quot;tidyverse&quot;, &quot;lubridate&quot;)
+if(length(setdiff(pkgs,rownames(installed.packages())))&gt;0) {install.packages(setdiff(pkgs,rownames(installed.packages())),dependencies=TRUE)}
+invisible(lapply(pkgs,library,character.only=T))</code></pre>
 <div id="import-data" class="section level4">
 <h4><strong>Import Data:</strong></h4>
 <pre class="r fold-show"><code>#import data

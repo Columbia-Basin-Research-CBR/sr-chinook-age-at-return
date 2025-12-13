@@ -1,27 +1,31 @@
 # Figures and Tables
 # for manuscript: "Biological, freshwater, and marine drivers of age at maturity in wild Chinook Salmon"
 # authors: Jennifer L. Gosselin, Benjamin P. Sandford, Caitlin S. O'Brien and Eric R. Buhle
-# last update: 2025-12-07
+# last update: 2025-12-12
 
 # Packages
-library(here)
-library(tidyverse)
-library(ggplot2)
-library(ggridges) # for forklength joyplot
-library(pals) # check color contrasts
-library(patchwork) # align plots and inset figures
-library(brms) # import model
-library(bayesplot) # for model fit and ppc_check
-library(data.table) # fread() for covariate data
-library(tidybayes) # gathering draws and epred
-library(ggdist) # plotting stat_half_eye color ramp
-library(flextable) # use for all table design word or pdf- https://ardata-fr.github.io/flextable-book/index.html#create-a-flextable
-library(ftExtra) # use to split headers better then separate_headers() https://cran.r-project.org/web/packages/ftExtra/vignettes/transform-headers.html
-library(modelr) # seq_range
-library(readxl)
-library(ggstream)
-library(showtext)
-library(ggtext)
+# library(here)
+# library(tidyverse)
+# library(ggplot2)
+# library(ggridges) # for forklength joyplot
+# library(pals) # check color contrasts
+# library(patchwork) # align plots and inset figures
+# library(brms) # import model
+# library(bayesplot) # for model fit and ppc_check
+# library(data.table) # fread() for covariate data
+# library(tidybayes) # gathering draws and epred
+# library(ggdist) # plotting stat_half_eye color ramp
+# library(flextable) # use for all table design word or pdf- https://ardata-fr.github.io/flextable-book/index.html#create-a-flextable
+# library(ftExtra) # use to split headers better then separate_headers() https://cran.r-project.org/web/packages/ftExtra/vignettes/transform-headers.html
+# library(modelr) # seq_range
+# library(readxl)
+# library(ggstream)
+# library(showtext)
+# library(ggtext)
+pkgs<-c("here", "tidyverse", "ggplot2", "ggridges", "pals", "patchwork", "brms", "bayesplot", "data.table",
+        "tidybayes", "ggdist", "flextable", "ftExtra", "modelr", "readxl", "ggstream", "showtext", "ggtext")
+if(length(setdiff(pkgs,rownames(installed.packages())))>0) {install.packages(setdiff(pkgs,rownames(installed.packages())),dependencies=TRUE)}
+invisible(lapply(pkgs,library,character.only=T))
 
 
 # color palettes
@@ -71,8 +75,8 @@ data.scaled <- DATA %>%
 
 
 # import model
-m <- readRDS(here("results/models.local", "fit_DOY_npgo3.rds"))
-
+# m <- readRDS(here("results/models.local", "fit_DOY_npgo3.rds"))
+m <- fit_DOY_npgo3
 
 
 ## Figure 2. Counts and proportion by age
@@ -152,8 +156,6 @@ p_Fig2
 
 
 ## Figure 3. hypothetical distr. and tao cutpoints
-# load(here("results/models.local", "fit_DOY_npgo3.rds"))
-m <- fit_DOY_npgo3
 
 draws <- as_draws_df(m) %>%
   select(.draw, `b_Intercept[1]`:`b_Intercept[2]`)
@@ -590,7 +592,6 @@ p_origin <- plot(c_eff, plot = FALSE)[[3]] +
     axis.title = element_text(size = 9.5),
     plot.margin = unit(c(0.3, 0.3, 0.6, 0.3), "cm")
   )
-# axis.text.x = element_text(angle = 270,vjust=.5, hjust = 1)
 
 
 # DOY
@@ -1023,6 +1024,9 @@ ggplot(d.return, aes(x = as.factor(SYage1))) +
 # Figure S2
 ## Number of adult returns by passage type and smolt age
 # pdf(here("results", "figures", "manuscript", "FigS2 Passtype and tag age & location.pdf"), width=8, height=4, onefile=TRUE)
+# New facet label names for transport
+p.labs <- c("In-river", "Transported")
+names(p.labs) <- c("ROR", "T")
 DATA %>%
   group_by(SYage1, OceanAge, pass_type_T_R, rel_age) %>%
   summarise(n = n()) %>%

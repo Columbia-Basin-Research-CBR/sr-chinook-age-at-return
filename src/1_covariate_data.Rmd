@@ -2,7 +2,7 @@
 title: "Covariate data for manuscript:"
 subtitle: "Biological, freshwater, and marine drivers of age at maturity in wild Chinook Salmon"
 author: "Jennifer L. Gosselin, Benjamin P. Sandford, Caitlin S. O'Brien and Eric R. Buhle"
-date: " Last updated: 2025-12-07"
+date: " Last updated: 2025-12-12"
 output:
   rmarkdown::html_document:
     theme: cosmo
@@ -14,10 +14,13 @@ output:
 
 ```{r, warning=FALSE, message=FALSE, error=FALSE, class.source='fold-show'}
 # Packages
-library(tidyverse)
-library(here)
-library(data.table)
-library(zoo)
+# library(here)
+# library(tidyverse)
+# library(data.table)
+# library(zoo)
+pkgs<-c("here", "tidyverse", "data.table", "zoo")
+if(length(setdiff(pkgs,rownames(installed.packages())))>0) {install.packages(setdiff(pkgs,rownames(installed.packages())),dependencies=TRUE)}
+invisible(lapply(pkgs,library,character.only=T))
 ```
 
 
@@ -35,7 +38,7 @@ library(zoo)
 
 #### **Basefile prep for covariate data joins**
 ```{r, warning=FALSE, error=FALSE, message=FALSE, class.source='fold-show' }
-d <- read_csv(here("data", "adult_age_data_subset.csv")) # importing filtered data from adult_age_basefile_SEPT2023.csv -> see file `0_data_subset.Rmd` for subset code.
+d <- read_csv(here("data", "adult_age_data_subset.csv")) # importing filtered data from adult_age_basefile.csv -> see file `0_data_subset.Rmd` for subset code.
 
 
 # paired down file to join covariates and factors of interest

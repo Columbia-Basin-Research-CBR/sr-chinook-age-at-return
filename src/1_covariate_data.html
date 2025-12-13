@@ -9,7 +9,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
-<meta name="author" content="Caitlin S. O’Brien and Jennifer L. Gosselin" />
+<meta name="author" content="Jennifer L. Gosselin, Benjamin P. Sandford, Caitlin S. O’Brien and Eric R. Buhle" />
 
 
 <title>Covariate data for manuscript:</title>
@@ -458,17 +458,21 @@ display: none;
 <h1 class="title toc-ignore">Covariate data for manuscript:</h1>
 <h3 class="subtitle">Biological, freshwater, and marine drivers of age
 at maturity in wild Chinook Salmon</h3>
-<h4 class="author">Caitlin S. O’Brien and Jennifer L. Gosselin</h4>
-<h4 class="date">Last updated: 2025-12-07</h4>
+<h4 class="author">Jennifer L. Gosselin, Benjamin P. Sandford, Caitlin
+S. O’Brien and Eric R. Buhle</h4>
+<h4 class="date">Last updated: 2025-12-12</h4>
 
 </div>
 
 
 <pre class="r fold-show"><code># Packages
-library(tidyverse)
-library(here)
-library(data.table)
-library(zoo)</code></pre>
+# library(here)
+# library(tidyverse)
+# library(data.table)
+# library(zoo)
+pkgs&lt;-c(&quot;here&quot;, &quot;tidyverse&quot;, &quot;data.table&quot;, &quot;zoo&quot;)
+if(length(setdiff(pkgs,rownames(installed.packages())))&gt;0) {install.packages(setdiff(pkgs,rownames(installed.packages())),dependencies=TRUE)}
+invisible(lapply(pkgs,library,character.only=T))</code></pre>
 <div id="section" class="section level1">
 <h1></h1>
 <div id="section-1" class="section level3">
@@ -486,7 +490,7 @@ dam (BON &gt; MCN &gt; ICH &gt; LGR).</li>
 </div>
 <div id="basefile-prep-for-covariate-data-joins" class="section level4">
 <h4><strong>Basefile prep for covariate data joins</strong></h4>
-<pre class="r fold-show"><code>d &lt;- read_csv(here(&quot;data&quot;, &quot;adult_age_data_subset.csv&quot;)) # importing filtered data from adult_age_basefile_SEPT2023.csv -&gt; see file `0_data_subset.Rmd` for subset code.
+<pre class="r fold-show"><code>d &lt;- read_csv(here(&quot;data&quot;, &quot;adult_age_data_subset.csv&quot;)) # importing filtered data from adult_age_basefile.csv -&gt; see file `0_data_subset.Rmd` for subset code.
 
 
 # paired down file to join covariates and factors of interest
