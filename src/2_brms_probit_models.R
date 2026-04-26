@@ -76,9 +76,9 @@ summary(fit_DOY_npgo3, prob=c(0.90))
 # conditional_effects(fit_DOY_npgo3, categorical = T, prob = .95)
 # posterior_summary(fit_DOY_npgo3)
 
-
+# random effects
 ranef.df <- ranef(fit_DOY_npgo3, probs = c(0.05, 0.95))
-ranef.df <- round(as.data.frame(ranef.df),4)
+ranef.df <- round(as.data.frame(ranef.df),3)
 write.csv(ranef.df, file=here("results/models.local", "random_effects.csv"))
 
 

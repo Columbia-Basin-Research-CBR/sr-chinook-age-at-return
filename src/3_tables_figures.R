@@ -210,7 +210,7 @@ p_ex_drib <- tibble(x = seq(from = -3, to = 3, by = .01)) %>%
   annotate(geom="text", x=-2.15, y=0.012, label=expression(bold("P(Age=3)")), col="black", cex=2.8) +
   annotate(geom="text", x=-.3, y=0.012, label=expression(bold("P(Age=4)")), col="cyan", cex=2.8) +
   annotate(geom="text", x=1.7, y=0.012, label=expression(bold("P(Age=5)")), col="darkred", cex=2.8) +
-  labs(y = "Probability", x = "z-score of latent variable equivalent to age") +
+  labs(y = "Probability", x = "Latent age response (y*)") +
   # ggtitle("Standard normal distribution underlying the ordinal Y data:",
   #         subtitle = "The solid vertical lines mark the posterior means for the thresholds. \nThe dashed vertical lines represent the 95 CI") +
   theme_minimal() +
