@@ -1,8 +1,8 @@
 ---
-title: "Covariate data for manuscript:"
-subtitle: "Biological, freshwater, and marine drivers of age at maturity in wild Chinook Salmon"
+title: "Covariate data for the research paper:"
+subtitle: "Biological, freshwater, and marine drivers of age at maturity in wild Chinook salmon"
 author: "Jennifer L. Gosselin, Benjamin P. Sandford, Caitlin S. O'Brien and Eric R. Buhle"
-date: " Last updated: 2025-12-13"
+date: " Last updated: 2026-07-15"
 output:
   rmarkdown::html_document:
     theme: cosmo

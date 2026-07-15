@@ -1,7 +1,7 @@
 # Figures and Tables
-# for manuscript: "Biological, freshwater, and marine drivers of age at maturity in wild Chinook Salmon"
+# for research paper: "Biological, freshwater, and marine drivers of age at maturity in wild Chinook salmon"
 # authors: Jennifer L. Gosselin, Benjamin P. Sandford, Caitlin S. O'Brien and Eric R. Buhle
-# last update: 2025-12-13
+# last update: 2026-07-15
 
 # Packages
 # library(here)
@@ -205,8 +205,8 @@ p_ex_drib <- tibble(x = seq(from = -3, to = 3, by = .01)) %>%
                      breaks = c(-3, -2, -1, 0, 1, 2, 3),
                      labels = c(-3, -2, -1, 0, 1, 2, 3)
   ) +
-  annotate(geom="text", x=-1.55, y=.14, label=expression(paste(tau[1]))) +
-  annotate(geom="text", x=.75, y=.32, label=expression(paste(tau[2]))) +
+  annotate(geom="text", x=-1.425, y=.18, label=expression(paste(tau[1]))) +
+  annotate(geom="text", x=.95, y=.285, label=expression(paste(tau[2]))) +
   annotate(geom="text", x=-2.15, y=0.012, label=expression(bold("P(Age=3)")), col="black", cex=2.8) +
   annotate(geom="text", x=-.3, y=0.012, label=expression(bold("P(Age=4)")), col="cyan", cex=2.8) +
   annotate(geom="text", x=1.7, y=0.012, label=expression(bold("P(Age=5)")), col="darkred", cex=2.8) +
@@ -743,8 +743,8 @@ patch2
 
 
 
-# Figure 6a.
-# pdf(here("results", "figures", "manuscript", "Fig6a Obs vs Pred proportions no RE.pdf"), width=7, height=9, onefile=TRUE)
+# Figure 6.
+# pdf(here("results", "figures", "manuscript", "Fig6 Obs vs Pred proportions no RE.pdf"), width=7, height=9, onefile=TRUE)
 y_int <- as.integer(data.scaled$age_group)
 
 # set yrep
@@ -781,8 +781,8 @@ ppc_bars_grouped(
 
 
 
-## Figure 6b.
-# pdf(here("results", "figures", "manuscript", "Fig6b Obs vs Pred counts no RE.pdf"), width=7, height=9, onefile=TRUE)
+## Figure S10.
+# pdf(here("results", "figures", "manuscript", "FigS10 Obs vs Pred counts no RE.pdf"), width=7, height=9, onefile=TRUE)
 
 ppc_bars_grouped(
   y = y_int,

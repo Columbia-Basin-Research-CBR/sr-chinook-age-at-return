@@ -1,7 +1,7 @@
 # probit regression models run with brms
-# for manuscript: "Biological, freshwater, and marine drivers of age at maturity in wild Chinook Salmon"
+# for research paper: "Biological, freshwater, and marine drivers of age at maturity in wild Chinook salmon"
 # authors: Jennifer L. Gosselin, Benjamin P. Sandford, Caitlin S. O'Brien and Eric R. Buhle
-# last update: 2025-12-13
+# last update: 2026-07-15
 
 # packages
 # library(here)
@@ -48,7 +48,7 @@ data.age.length <- DATA %>%
 
 # scale data
 data.scaled <- data.age.length %>%
-  mutate_at(c(16:21), ~ (scale(.) %>% as.vector())) # adjust as needed
+  mutate_at(c(16:21), ~ (scale(.) %>% as.vector())) 
 
 
 # Consider excluding combinations of covariates with correlation coefficients > 0.4
@@ -69,7 +69,7 @@ fit_DOY_npgo3 <- brm(age_group ~ length * rel_age + MPG + SYage1_DOY + LGR.flow.
                      init = 0,
                      # file = here("results/models.local", "fit_DOY_npgo3.rds")
 )
-summary(fit_DOY_npgo3, prob=c(0.90))
+summary(fit_DOY_npgo3, prob=c(0.90)) # Table S4
 # launch_shinystan(fit_DOY_npgo3)
 # prior_summary(fit_DOY_npgo3)
 # plot(fit_DOY_npgo3)
@@ -78,7 +78,7 @@ summary(fit_DOY_npgo3, prob=c(0.90))
 
 # random effects
 ranef.df <- ranef(fit_DOY_npgo3, probs = c(0.05, 0.95))
-ranef.df <- round(as.data.frame(ranef.df),3)
+ranef.df <- round(as.data.frame(ranef.df),3) # Table S11
 write.csv(ranef.df, file=here("results/models.local", "random_effects.csv"))
 
 
@@ -94,7 +94,7 @@ fit_TEMP_npgo3 <- brm(age_group ~ length * rel_age + MPG + LGR.temp.7d + LGR.flo
                       init = 0,
                       # file = here("results/models.local", "fit_TEMP_npgo3.rds")
 )
-summary(fit_TEMP_npgo3, prob=c(0.90))
+summary(fit_TEMP_npgo3, prob=c(0.90)) # Table S5
 # launch_shinystan(fit_TEMP_npgo3)
 
 
@@ -112,7 +112,7 @@ fit_fish <- brm(age_group ~ length*rel_age + MPG + SYage1_DOY+ (1 | SYage1),
                 init = 0,
                 # file = here("results/models.local", "fit_fish.rds")
 )
-summary(fit_fish, prob=c(0.90))
+summary(fit_fish, prob=c(0.90)) # Table S6
 
 
 
@@ -127,7 +127,7 @@ fit_freshwater1<- brm(age_group ~ LGR.temp.7d + LGR.flow.7d + pass_type_T_R + (1
                       init = 0,
                       # file = here("results/models.local", "fit_freshwater1.rds")
 )
-summary(fit_freshwater1, prob=c(0.90))
+summary(fit_freshwater1, prob=c(0.90)) # Table S7
 
 fit_freshwater2<- brm(age_group ~ LGR.flow.7d + pass_type_T_R + (1 | SYage1),
                       data = data.scaled,
@@ -139,7 +139,7 @@ fit_freshwater2<- brm(age_group ~ LGR.flow.7d + pass_type_T_R + (1 | SYage1),
                       init = 0,
                       # file = here("results/models.local", "fit_freshwater2.rds")
 )
-summary(fit_freshwater2, prob=c(0.90))
+summary(fit_freshwater2, prob=c(0.90)) # Table S8
 
 
 
@@ -154,11 +154,11 @@ fit_marine<- brm(age_group ~ NPGO.ONDJFM.T.AVG3 + (1 | SYage1),
                  init = 0,
                  # file = here("results/models.local", "fit_marine.rds")
 )
-summary(fit_marine, prob=c(0.90))
+summary(fit_marine, prob=c(0.90)) # Table S9
 
 
 
 ## compare
-loo.results<-loo(fit_DOY_npgo3, fit_TEMP_npgo3, fit_fish, fit_freshwater1, fit_freshwater2, fit_marine)
+loo.results<-loo(fit_DOY_npgo3, fit_TEMP_npgo3, fit_fish, fit_freshwater1, fit_freshwater2, fit_marine) # Table S10
 
 
