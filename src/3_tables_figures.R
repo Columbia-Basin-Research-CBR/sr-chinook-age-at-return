@@ -22,8 +22,9 @@
 # library(ggstream)
 # library(showtext)
 # library(ggtext)
+# library(zoo)
 pkgs<-c("here", "tidyverse", "ggplot2", "ggridges", "pals", "patchwork", "brms", "bayesplot", "data.table",
-        "tidybayes", "ggdist", "flextable", "ftExtra", "modelr", "readxl", "ggstream", "showtext", "ggtext")
+        "tidybayes", "ggdist", "flextable", "ftExtra", "modelr", "readxl", "ggstream", "showtext", "ggtext", "zoo")
 if(length(setdiff(pkgs,rownames(installed.packages())))>0) {install.packages(setdiff(pkgs,rownames(installed.packages())),dependencies=TRUE)}
 invisible(lapply(pkgs,library,character.only=T))
 
@@ -79,7 +80,86 @@ data.scaled <- DATA %>%
 m <- fit_DOY_npgo3
 
 
-## Figure 2. Counts and proportion by age
+
+## Figure 2. hypothetical distr. and tao cutpoints
+
+draws <- as_draws_df(m) %>%
+  select(.draw, `b_Intercept[1]`:`b_Intercept[2]`)
+
+# summarize draws (int 1 and 2 only)
+taos <- m %>%
+  gather_draws(`b_Intercept[1]`, `b_Intercept[2]`) %>%
+  summarise_draws()
+taos
+
+# only select medians with 5 to 95 CI
+med_taos <- taos %>%
+  select(1, 4, 7:8) %>%
+  pivot_wider(names_from = .variable, values_from = c("median", "q5", "q95"))
+med_taos
+
+# plot with vertical lines to represent median, with 5 to 95 CI
+p_ex_drib <- tibble(x = seq(from = -3, to = 3, by = .01)) %>%
+  mutate(d = dnorm(x)) %>%
+  ggplot(aes(x = x, ymin = 0, ymax = d)) +
+  geom_ribbon(fill = "darkgrey") +
+  # tao 1
+  geom_segment(x = as.numeric(med_taos[1,1]), y = 0,
+               xend = as.numeric(med_taos[1,1]), yend = 0.16,
+               color = "white", linetype = 1, linewidth = 1) +
+  # tao 2
+  geom_segment(x = as.numeric(med_taos[1,2]), y = 0,
+               xend = as.numeric(med_taos[1,2]), yend = 0.31,
+               color = "white", linetype = 1, linewidth = 1) +
+  # tao 1, low CL
+  geom_segment(x = as.numeric(med_taos[1,3]), y = 0,
+               xend = as.numeric(med_taos[1,3]), yend = 0.13,
+               color = "white", linetype = 2, linewidth = .3) +
+  # tao 1, high CL
+  geom_segment(x = as.numeric(med_taos[1,5]), y = 0,
+               xend = as.numeric(med_taos[1,5]), yend = 0.2,
+               color = "white", linetype = 2, linewidth = .3) +
+  # tao 2, low CL
+  geom_segment(x = as.numeric(med_taos[1,4]), y = 0,
+               xend = as.numeric(med_taos[1,4]), yend = 0.349,
+               color = "white", linetype = 2, linewidth = .3) +
+  # tao 2, high CL
+  geom_segment(x = as.numeric(med_taos[1,6]), y = 0,
+               xend = as.numeric(med_taos[1,6]), yend = 0.245,
+               color = "white", linetype = 2, linewidth = .3) +
+  scale_x_continuous(NULL,
+                     breaks = c(-3, -2, -1, 0, 1, 2, 3),
+                     labels = c(-3, -2, -1, 0, 1, 2, 3)
+  ) +
+  annotate(geom="text", x=-1.425, y=.18, label=expression(paste(tau[1]))) +
+  annotate(geom="text", x=.95, y=.285, label=expression(paste(tau[2]))) +
+  annotate(geom="text", x=-2.15, y=0.012, label=expression(bold("P(Age=3)")), col="black", cex=2.8) +
+  annotate(geom="text", x=-.3, y=0.012, label=expression(bold("P(Age=4)")), col="cyan", cex=2.8) +
+  annotate(geom="text", x=1.7, y=0.012, label=expression(bold("P(Age=5)")), col="darkred", cex=2.8) +
+  labs(y = "Probability", x = "Latent age response (y*)") +
+  # ggtitle("Standard normal distribution underlying the ordinal Y data:",
+  #         subtitle = "The solid vertical lines mark the posterior means for the thresholds. \nThe dashed vertical lines represent the 95 CI") +
+  theme_minimal() +
+  theme(
+    strip.text = element_blank(),
+    axis.line.x = element_line(linewidth = 0.3),
+    axis.ticks = element_line(linewidth = 0.3),
+    axis.line.y = element_line(linewidth = 0.3),
+    axis.title.x = element_text(margin = margin(t = 8, r = 0, b = 0, l = 0)),
+    axis.title.y = element_text(margin = margin(t = 0, r = 8, b = 0, l = 0)),
+    plot.margin = margin(t = 20,
+                         r = 50,
+                         b = 40,
+                         l = 10)) +
+  coord_cartesian(xlim = c(-3, 3))
+# pdf(here("results", "figures", "manuscript", "Fig2 Distrib and tao cutpoints.pdf"), width=7, height=4, onefile=TRUE)
+p_ex_drib
+# dev.off()
+
+
+
+
+## Figure 3. Counts and proportions by age
 d.return <- data.scaled %>%
   mutate_if(sapply(data.scaled, is.character), as.factor) %>%
   group_by(pass_type_T_R, SYage1, OceanAge, OA.true) %>%
@@ -147,88 +227,12 @@ p.bar.prop <- ggplot(d.return, aes(x = as.factor(SYage1), y = n, fill = forcats:
     panel.background = element_blank()
   )
 
-p_Fig2 <- p.line.count + p.bar.prop + plot_layout(nrow=2)
+p_Fig3 <- p.line.count + p.bar.prop + plot_layout(nrow=2)
 
-# pdf(here("results", "figures", "manuscript", "Fig2 Count by Age.pdf"), width=7, height=5, onefile=TRUE)
-p_Fig2
+# pdf(here("results", "figures", "manuscript", "Fig3 Count by Age.pdf"), width=9, height=8, onefile=TRUE)
+p_Fig3
 # dev.off()
 
-
-
-## Figure 3. hypothetical distr. and tao cutpoints
-
-draws <- as_draws_df(m) %>%
-  select(.draw, `b_Intercept[1]`:`b_Intercept[2]`)
-
-# summarize draws (int 1 and 2 only)
-taos <- m %>%
-  gather_draws(`b_Intercept[1]`, `b_Intercept[2]`) %>%
-  summarise_draws()
-taos
-
-# only select medians with 5 to 95 CI
-med_taos <- taos %>%
-  select(1, 4, 7:8) %>%
-  pivot_wider(names_from = .variable, values_from = c("median", "q5", "q95"))
-med_taos
-
-# plot with vertical lines to represent median, with 5 to 95 CI
-p_ex_drib <- tibble(x = seq(from = -3, to = 3, by = .01)) %>%
-  mutate(d = dnorm(x)) %>%
-  ggplot(aes(x = x, ymin = 0, ymax = d)) +
-  geom_ribbon(fill = "darkgrey") +
-  # tao 1
-  geom_segment(x = as.numeric(med_taos[1,1]), y = 0,
-               xend = as.numeric(med_taos[1,1]), yend = 0.16,
-               color = "white", linetype = 1, linewidth = 1) +
-  # tao 2
-  geom_segment(x = as.numeric(med_taos[1,2]), y = 0,
-               xend = as.numeric(med_taos[1,2]), yend = 0.31,
-               color = "white", linetype = 1, linewidth = 1) +
-  # tao 1, low CL
-  geom_segment(x = as.numeric(med_taos[1,3]), y = 0,
-                xend = as.numeric(med_taos[1,3]), yend = 0.13,
-                color = "white", linetype = 2, linewidth = .3) +
-  # tao 1, high CL
-  geom_segment(x = as.numeric(med_taos[1,5]), y = 0,
-               xend = as.numeric(med_taos[1,5]), yend = 0.2,
-               color = "white", linetype = 2, linewidth = .3) +
-  # tao 2, low CL
-  geom_segment(x = as.numeric(med_taos[1,4]), y = 0,
-               xend = as.numeric(med_taos[1,4]), yend = 0.349,
-               color = "white", linetype = 2, linewidth = .3) +
-  # tao 2, high CL
-  geom_segment(x = as.numeric(med_taos[1,6]), y = 0,
-               xend = as.numeric(med_taos[1,6]), yend = 0.245,
-               color = "white", linetype = 2, linewidth = .3) +
-  scale_x_continuous(NULL,
-                     breaks = c(-3, -2, -1, 0, 1, 2, 3),
-                     labels = c(-3, -2, -1, 0, 1, 2, 3)
-  ) +
-  annotate(geom="text", x=-1.425, y=.18, label=expression(paste(tau[1]))) +
-  annotate(geom="text", x=.95, y=.285, label=expression(paste(tau[2]))) +
-  annotate(geom="text", x=-2.15, y=0.012, label=expression(bold("P(Age=3)")), col="black", cex=2.8) +
-  annotate(geom="text", x=-.3, y=0.012, label=expression(bold("P(Age=4)")), col="cyan", cex=2.8) +
-  annotate(geom="text", x=1.7, y=0.012, label=expression(bold("P(Age=5)")), col="darkred", cex=2.8) +
-  labs(y = "Probability", x = "Latent age response (y*)") +
-  # ggtitle("Standard normal distribution underlying the ordinal Y data:",
-  #         subtitle = "The solid vertical lines mark the posterior means for the thresholds. \nThe dashed vertical lines represent the 95 CI") +
-  theme_minimal() +
-  theme(
-    strip.text = element_blank(),
-    axis.line.x = element_line(linewidth = 0.3),
-    axis.ticks = element_line(linewidth = 0.3),
-    axis.line.y = element_line(linewidth = 0.3),
-    axis.title.x = element_text(margin = margin(t = 8, r = 0, b = 0, l = 0)),
-    axis.title.y = element_text(margin = margin(t = 0, r = 8, b = 0, l = 0)),
-    plot.margin = margin(t = 20,
-                         r = 50,
-                         b = 40,
-                         l = 10)) +
-  coord_cartesian(xlim = c(-3, 3))
-# pdf(here("results", "figures", "manuscript", "Fig3 Distrib and tao cutpoints.pdf"), width=7, height=4, onefile=TRUE)
-p_ex_drib
-# dev.off()
 
 
 
@@ -309,7 +313,7 @@ m %>%
 
   geom_hline(yintercept = 1.7, color = pal_cov[3], alpha = 0.2, linewidth = 3.5) +
   annotate("segment", x = -.98, y = 1.6, xend = -.98, yend = 0.8, color = pal_cov[3], alpha = .3, linewidth = 2.3) +
-  annotate("text", y = 1.7, x = -0.98, label = "  Marine covariates", color = "black", hjust = 0, size = 3.1) +
+  annotate("text", y = 1.7, x = -0.98, label = "  Marine covariate", color = "black", hjust = 0, size = 3.1) +
 
   annotate("segment", x = -.98, y = 15.1, xend = -.98, yend = 14.9, color = "#a37a29", alpha = .4, linewidth = 2.3) +
 
@@ -619,7 +623,7 @@ p_DOY <- plot(c_eff, plot = FALSE)[[4]] +
     legend.position = "none",
     axis.line.x = element_line(linewidth = 0.2),
     axis.ticks = element_line(linewidth = 0.2),
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    axis.text.x = element_text(angle = 0, vjust = 0.5, hjust = 0.5),
     axis.line.y = element_line(linewidth = 0.2),
     plot.title = element_text(size = 10),
     axis.title = element_text(size = 9.5),
@@ -689,7 +693,7 @@ p_flow <- plot(c_eff, plot = FALSE)[[5]] +
     legend.position = "none",
     axis.line.x = element_line(linewidth = 0.2),
     axis.ticks = element_line(linewidth = 0.2),
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    axis.text.x = element_text(angle = 0, vjust = 0.5, hjust = 0.5),
     axis.line.y = element_line(linewidth = 0.2),
     plot.title = element_text(size = 10),
     axis.title = element_text(size = 9.5),
@@ -803,7 +807,10 @@ ppc_bars_grouped(
   labs(x = "Ocean Age", y = "Count of adult returns") + theme(text = element_text(size = 14)) +
   theme_tidybayes() +
   theme(
-    legend.position = "none",
+    legend.position = c(.85, .05),
+    legend.key.size = unit(.5, "cm"),
+    legend.spacing.y = unit(.02, "cm"),
+    legend.background = element_blank(),
     strip.text.x = element_text(margin = margin(0.05, 0, 0.05, 0, "cm")),
     strip.text = element_text(size = 8),
     panel.spacing = unit(1, "lines")
